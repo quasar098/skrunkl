@@ -241,7 +241,8 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
 @bot.event
 async def on_command_error(event: str, *args, **kwargs):
     type_, value, traceback = sys.exc_info()
-    print(f"stopping bot due to error\ntraceback: {traceback}")
+    print(f"stopping bot due to error\ntraceback: {traceback}\ntype={type_}\nvalue={value}\nevent={event}")
+    quit()
 
 
 @bot.event
