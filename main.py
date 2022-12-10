@@ -7,10 +7,12 @@ import os
 import shutil
 import sys
 from dotenv import load_dotenv
+from time import time
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
 PRINT_STACK_TRACE = os.getenv('PRINT_STACK_TRACE', '1').lower() in ('true', 't', '1')
+COOLDOWN = int(os.getenv('COOLDOWN', '5'))
 
 PREFIX = 's!'
 COLOR = 0xff0000
@@ -26,6 +28,7 @@ bot = commands.Bot(
 )
 
 queues = {}  # {server_id: [(vid_file, info), ...]}
+cooldowns = {}  # {server_id: next_available_time}
 
 
 def main():
@@ -100,6 +103,25 @@ async def skip(ctx: commands.Context, *args):
     voice_client.stop()
 
 
+@bot.command(name="remove")
+async def remove_from_queue(ctx: commands.context, *args):
+    sid = ctx.guild.id
+    # noinspection PyBroadException
+    try:
+        num = int(args[0])
+        if num <= 0:
+            await ctx.send(f"{ctx.message.author.message} number too low")
+            return
+        if num >= len(queues[sid]):
+            await ctx.send(f"{ctx.message.author.message} index too high")
+            return
+        await ctx.send(f"removed {queues[sid][num][0]['title']} from queue")
+        queues[sid].pop(num)
+        await show_queue(ctx)
+    except Exception:
+        await ctx.send(f"{ctx.message.author.message} something went wrong (maybe you are bad at typing)")
+
+
 @bot.command(name='disconnect', aliases=['dc'])
 async def disconnect_from_vc(ctx: commands.Context, *args):
     voice_state = ctx.author.voice
@@ -145,6 +167,12 @@ async def play(ctx: commands.Context, *args):
         ydl.download([query])
 
     path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
+    if server_id not in cooldowns:
+        cooldowns[server_id] = time()+COOLDOWN
+    else:
+        if cooldowns[server_id] > time():
+            await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
+            return
 
     if server_id in queues:
         queues[server_id].append((path, info))
@@ -250,9 +278,9 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
 
         try:
             shutil.rmtree(f'./dl/{server_id}/')
-            print("successfully removed cached download")
+            print("successfully removed cached downloads")
         except FileNotFoundError:
-            print("could not remove cached file")
+            print("could not remove cached files")
 
 
 @bot.event
