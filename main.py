@@ -128,6 +128,14 @@ async def play(ctx: commands.Context, *args):
 
     server_id = ctx.guild.id
 
+    if server_id not in cooldowns:
+        cooldowns[server_id] = 0
+    if cooldowns[server_id] > time():
+        await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
+        return
+    else:
+        cooldowns[server_id] = time()+COOLDOWN
+
     # source address as 0.0.0.0 to force ipv4 because ipv6 breaks it for some reason
     # this is equivalent to --force-ipv4 (line 312 of https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/options.py)
     await ctx.send(f'looking for `{query}`...')
@@ -148,13 +156,6 @@ async def play(ctx: commands.Context, *args):
         ydl.download([query])
 
     path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
-    if server_id not in cooldowns:
-        cooldowns[server_id] = 0
-    if cooldowns[server_id] > time():
-        await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
-        return
-    else:
-        cooldowns[server_id] = time()+COOLDOWN
 
     if server_id in queues:
         queues[server_id].append((path, info))
