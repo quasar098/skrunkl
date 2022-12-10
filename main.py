@@ -103,25 +103,6 @@ async def skip(ctx: commands.Context, *args):
     voice_client.stop()
 
 
-@bot.command(name="remove")
-async def remove_from_queue(ctx: commands.context, *args):
-    sid = ctx.guild.id
-    # noinspection PyBroadException
-    try:
-        num = int(args[0])
-        if num <= 0:
-            await ctx.send(f"{ctx.message.author.message} number too low")
-            return
-        if num >= len(queues[sid]):
-            await ctx.send(f"{ctx.message.author.message} index too high")
-            return
-        await ctx.send(f"removed {queues[sid][num][0]['title']} from queue")
-        queues[sid].pop(num)
-        await show_queue(ctx)
-    except Exception:
-        await ctx.send(f"{ctx.message.author.message} something went wrong (maybe you are bad at typing)")
-
-
 @bot.command(name='disconnect', aliases=['dc'])
 async def disconnect_from_vc(ctx: commands.Context, *args):
     voice_state = ctx.author.voice
@@ -168,11 +149,12 @@ async def play(ctx: commands.Context, *args):
 
     path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
     if server_id not in cooldowns:
-        cooldowns[server_id] = time()+COOLDOWN
+        cooldowns[server_id] = 0
+    if cooldowns[server_id] > time():
+        await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
+        return
     else:
-        if cooldowns[server_id] > time():
-            await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
-            return
+        cooldowns[server_id] = time()+COOLDOWN
 
     if server_id in queues:
         queues[server_id].append((path, info))
