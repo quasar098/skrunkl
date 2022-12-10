@@ -108,7 +108,9 @@ async def disconnect_from_vc(ctx: commands.Context, *args):
     except discord.ClientException:
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
     await ctx.send(f"{ctx.message.author.mention} disconnecting from vc")
+    conn.stop()
     await safe_disconnect(conn)
+    queues.pop(ctx.guild.id)
 
 
 @bot.command(name='play', aliases=['p'])
@@ -142,30 +144,29 @@ async def play(ctx: commands.Context, *args):
                        + (f'https://youtu.be/{info["id"]}' if will_need_search else f'`{info["title"]}`'))
         ydl.download([query])
 
-        path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
+    path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
 
-        if server_id in queues:
-            print(f"{ctx.message.author.mention} adding a song to queue")
-            queues[server_id].append((path, info))
-            await ctx.send(f"{ctx.message.author.mention} adding {info['title']} to queue")
-            return
-        queues[server_id] = [(path, info)]
+    if server_id in queues:
+        queues[server_id].append((path, info))
+        await ctx.send(f"{ctx.message.author.mention} adding {info['title']} to queue")
+        return
+    queues[server_id] = [(path, info)]
 
-        try:
-            conn = await voice_state.channel.connect()
-        except discord.ClientException:
-            conn = get_voice_client_from_channel_id(voice_state.channel.id)
+    try:
+        conn = await voice_state.channel.connect()
+    except discord.ClientException:
+        conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
-        def next_song(err=None, connection=conn, sid=server_id):
-            print(f"playing next song in {server_id}")
-            after_track(err, connection, sid)
+    def next_song(err=None, connection=conn, sid=server_id):
+        print(f"playing next song in {server_id}")
+        after_track(err, connection, sid)
 
-        await ctx.send(f"playing {info['title']}")
+    await ctx.send(f"playing `{info['title']}`")
 
-        conn.play(
-            discord.FFmpegOpusAudio(path),
-            after=next_song
-        )
+    conn.play(
+        discord.FFmpegOpusAudio(path),
+        after=next_song
+    )
 
 
 def get_voice_client_from_channel_id(channel_id: int):
