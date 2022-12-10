@@ -53,7 +53,7 @@ async def show_queue(ctx: commands.Context, *args):
 
         queue_str = ''.join(map(title_str, enumerate([i[1]["title"] for i in queue])))
         embed_ = discord.Embed(color=COLOR)
-        embed_.add_field(name='now playing:', value=queue_str)
+        embed_.add_field(name='currently playing:', value=queue_str)
         await ctx.send(embed=embed_)
 
     if not await sense_checks(ctx):
@@ -158,7 +158,7 @@ async def play(ctx: commands.Context, *args):
 
         def next_song(err=None, connection=conn, sid=server_id):
             print(f"playing next song in {server_id}")
-            after_track(ctx, err, connection, sid)
+            after_track(err, connection, sid)
 
         await ctx.send(f"playing {info['title']}")
 
@@ -174,7 +174,7 @@ def get_voice_client_from_channel_id(channel_id: int):
             return voice_client
 
 
-def after_track(ctxt, error, connection, server_id):
+def after_track(error, connection, server_id):
     if error is not None:
         print(f"err: {error}")
     try:
@@ -190,12 +190,11 @@ def after_track(ctxt, error, connection, server_id):
             print(f"couldn't delete {path}")
 
     try:
-        await ctxt.send(f"playing {queues[server_id][0][1]['title']}")
         connection.play(
             discord.FFmpegOpusAudio(
                 queues[server_id][0][0]),
             after=lambda err=None, cn=connection, sid=server_id:
-            after_track(ctxt, err, cn, sid)
+            after_track(err, cn, sid)
         )
         print("successfully played queue")
     except IndexError:  # that was the last item in queue
