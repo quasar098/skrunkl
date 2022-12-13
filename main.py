@@ -44,6 +44,7 @@ def load_from_file():
     try:
         with open("saved.json") as f:
             saved = json.load(f)
+            print("success!")
     except Exception:
         print("fail reading json saved")
         saved = {}
