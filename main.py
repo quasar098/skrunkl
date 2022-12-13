@@ -8,6 +8,7 @@ import shutil
 import sys
 from dotenv import load_dotenv
 from time import time
+import json
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
@@ -29,6 +30,23 @@ bot = commands.Bot(
 
 queues = {}  # {server_id: [(vid_file, info), ...]}
 cooldowns = {}  # {server_id: next_available_time}
+saved = {}  # {server_id: {list_name: {search_query}}}
+
+
+def save_to_file():
+    with open(f"saved.json", 'w') as f:
+        json.dump(saved, f)
+
+
+def load_from_file():
+    global saved
+    # noinspection PyBroadException
+    try:
+        with open("saved.json") as f:
+            saved = json.load(f)
+    except Exception:
+        print("fail reading json saved")
+        saved = {}
 
 
 def main():
@@ -36,9 +54,126 @@ def main():
         return ("No token provided. Please create a .env file containing the token.\n" +
                 "For more information view the README.md")
     try:
+        load_from_file()
         bot.run(TOKEN)
     except discord.PrivilegedIntentsRequired as err:
         return err
+
+
+@bot.command(name="addlist", aliases=["al"])
+async def add_to_list(ctx: commands.Context, *args):
+    server_id = ctx.guild.id
+
+    if server_id not in saved:
+        saved[server_id] = {}
+
+    save = saved[server_id]
+    if not (len(args) > 1):
+        await ctx.send(f"you are using incorrectly")
+        return
+
+    lname = args[0]
+    quer = ' '.join(args[1:])
+
+    if lname not in save:
+        await ctx.send(f"created new list {quer}")
+        save[lname] = []
+
+    save[lname].append(quer)
+    await ctx.send(f"added {quer} to list")
+    save_to_file()
+
+
+@bot.command(name="dellist", aliases=["dl"])
+async def delete_list(ctx: commands.Context, *args):
+    server_id = ctx.guild.id
+
+    if server_id not in saved:
+        saved[server_id] = {}
+
+    quer = ' '.join(args)
+
+    if quer in saved[server_id]:
+        saved[server_id].pop(quer)
+        await ctx.send("deleted list")
+        return
+    await ctx.send("you are a fucking buffoon")
+
+
+@bot.command(name="playlist", aliases=['pl'])
+async def play_list(ctx: commands.Context, *args):
+    server_id = ctx.guild.id
+
+    if server_id not in saved:
+        saved[server_id] = {}
+
+    save = saved[server_id]
+    quer = ' '.join(args)
+
+    if quer not in save:
+        await ctx.send(f"{ctx.message.author.mention} this list no exist")
+        return
+
+    for _ in save[quer]:
+
+        query = _
+        voice_state = ctx.author.voice
+        if not await sense_checks(ctx, voice_state=voice_state):
+            return
+
+        # this is how it's determined if the url is valid (i.e. whether to search or not) under the hood of yt-dlp
+        will_need_search = not urlparse(query).scheme
+
+        if server_id not in cooldowns:
+            cooldowns[server_id] = 0
+        if cooldowns[server_id] > time():
+            await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
+            return
+        else:
+            cooldowns[server_id] = time()+COOLDOWN
+
+        # source address as 0.0.0.0 to force ipv4 because ipv6 breaks it for some reason
+        # this is equivalent to --force-ipv4 (line 312 of https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/options.py
+        await ctx.send(f'looking for `{query}`...')
+        with yt_dlp.YoutubeDL({'format': 'worstaudio',
+                               'source_address': '0.0.0.0',
+                               'default_search': 'ytsearch',
+                               'outtmpl': '%(id)s.%(ext)s',
+                               'noplaylist': True,
+                               'allow_playlist_files': False,
+                               'paths': {'home': f'./dl/{server_id}'}}) as ydl:
+            info = ydl.extract_info(query, download=False)
+            if 'entries' in info:
+                info = info['entries'][0]
+
+            # send link if it was a search, otherwise send title as sending link again would clutter chat with previews
+            await ctx.send('downloading '
+                           + (f'https://youtu.be/{info["id"]}' if will_need_search else f'`{info["title"]}`'))
+            ydl.download([query])
+
+        path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
+
+        if server_id in queues:
+            queues[server_id].append((path, info))
+            await ctx.send(f"{ctx.message.author.mention} adding {info['title']} to queue")
+            return
+        queues[server_id] = [(path, info)]
+
+        try:
+            conn = await voice_state.channel.connect()
+        except discord.ClientException:
+            conn = get_voice_client_from_channel_id(voice_state.channel.id)
+
+        def next_song(err=None, connection=conn, sid=server_id):
+            print(f"playing next song in {server_id}")
+            after_track(err, connection, sid)
+
+        await ctx.send(f"playing `{info['title']}`")
+
+        conn.play(
+            discord.FFmpegOpusAudio(path),
+            after=next_song
+        )
 
 
 @bot.command(name='queue', aliases=['q'])
