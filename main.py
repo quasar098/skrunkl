@@ -4,7 +4,6 @@ import yt_dlp
 from urllib.parse import urlparse
 import asyncio
 import os
-import shutil
 import sys
 from dotenv import load_dotenv
 from time import time
@@ -76,7 +75,7 @@ async def add_to_list(ctx: commands.Context, *args):
     quer = ' '.join(args[1:])
 
     if lname not in save:
-        await ctx.send(f"created new list {quer}")
+        await ctx.send(f"created new list {lname}")
         save[lname] = []
 
     save[lname].append(quer)
@@ -114,6 +113,14 @@ async def play_list(ctx: commands.Context, *args):
         await ctx.send(f"{ctx.message.author.mention} this list no exist")
         return
 
+    if server_id not in cooldowns:
+        cooldowns[server_id] = 0
+    if cooldowns[server_id] > time():
+        await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
+        return
+    else:
+        cooldowns[server_id] = time()+COOLDOWN
+
     for _ in save[quer]:
 
         query = _
@@ -123,14 +130,6 @@ async def play_list(ctx: commands.Context, *args):
 
         # this is how it's determined if the url is valid (i.e. whether to search or not) under the hood of yt-dlp
         will_need_search = not urlparse(query).scheme
-
-        if server_id not in cooldowns:
-            cooldowns[server_id] = 0
-        if cooldowns[server_id] > time():
-            await ctx.send(f"{ctx.message.author.mention} stop spamming (there is a cooldown)")
-            return
-        else:
-            cooldowns[server_id] = time()+COOLDOWN
 
         # source address as 0.0.0.0 to force ipv4 because ipv6 breaks it for some reason
         # this is equivalent to --force-ipv4 (line 312 of https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/options.py
@@ -155,7 +154,7 @@ async def play_list(ctx: commands.Context, *args):
 
         if server_id in queues:
             queues[server_id].append((path, info))
-            await ctx.send(f"{ctx.message.author.mention} adding {info['title']} to queue")
+            await ctx.send(f"adding {info['title']} to queue")
             return
         queues[server_id] = [(path, info)]
 
