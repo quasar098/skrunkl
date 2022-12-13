@@ -9,6 +9,7 @@ import sys
 from dotenv import load_dotenv
 from time import time
 import json
+from random import shuffle
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
@@ -124,7 +125,12 @@ async def play_list(ctx: commands.Context, *args):
     else:
         cooldowns[server_id] = time()+COOLDOWN
 
-    for _ in save[quer]:
+    test = save[quer]
+    shuffle(test)
+
+    for _ in test:
+
+        print(f"downloading {_}")
 
         query = _
         voice_state = ctx.author.voice
