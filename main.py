@@ -4,6 +4,7 @@ import yt_dlp
 from urllib.parse import urlparse
 import asyncio
 import os
+import shutil
 import sys
 from dotenv import load_dotenv
 from time import time
@@ -29,7 +30,7 @@ bot = commands.Bot(
 
 queues = {}  # {server_id: [(vid_file, info), ...]}
 cooldowns = {}  # {server_id: next_available_time}
-saved = {}  # {server_id: {list_name: {search_query}}}
+saved = {}  # {server_id: {list_name: [search_queries...]}}
 
 
 def save_to_file():
@@ -195,6 +196,11 @@ async def show_queue(ctx: commands.Context, *args):
 
     if not await sense_checks(ctx):
         return
+
+
+@bot.command(name='showlist', aliases=['sl'])
+async def show_lists(ctx: commands.Context, *args):
+    await ctx.send(json.dumps(saved[ctx.guild.id]))
 
 
 @bot.command(name='skip', aliases=['s'])
