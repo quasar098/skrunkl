@@ -65,10 +65,10 @@ def main():
 async def add_to_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if server_id not in saved:
-        saved[server_id] = {}
+    if str(server_id) not in saved:
+        saved[str(server_id)] = {}
 
-    save = saved[server_id]
+    save = saved[str(server_id)]
     if not (len(args) > 1):
         await ctx.send(f"you are using incorrectly")
         return
@@ -89,13 +89,13 @@ async def add_to_list(ctx: commands.Context, *args):
 async def delete_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if server_id not in saved:
-        saved[server_id] = {}
+    if str(server_id) not in saved:
+        saved[str(server_id)] = {}
 
     quer = ' '.join(args)
 
-    if quer in saved[server_id]:
-        saved[server_id].pop(quer)
+    if quer in saved[str(server_id)]:
+        saved[str(server_id)].pop(quer)
         await ctx.send("deleted list")
         return
     await ctx.send("you are a fucking buffoon")
@@ -105,10 +105,10 @@ async def delete_list(ctx: commands.Context, *args):
 async def play_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if server_id not in saved:
-        await ctx.send(f"ok")
+    if str(server_id) not in saved:
+        saved[str(server_id)] = {}
 
-    save = saved[server_id]
+    save = saved[str(server_id)]
     quer = ' '.join(args)
 
     if quer not in save:
@@ -202,7 +202,7 @@ async def show_queue(ctx: commands.Context, *args):
 
 @bot.command(name='showlist', aliases=['sl'])
 async def show_lists(ctx: commands.Context, *args):
-    await ctx.send(json.dumps(saved[ctx.guild.id]))
+    await ctx.send(json.dumps(saved[str(ctx.guild.id)]))
 
 
 @bot.command(name='skip', aliases=['s'])
