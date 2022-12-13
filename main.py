@@ -44,7 +44,7 @@ def load_from_file():
     try:
         with open("saved.json") as f:
             saved = json.load(f)
-            print("success!")
+            print(f"success! {saved}")
     except Exception:
         print("fail reading json saved")
         saved = {}
@@ -106,12 +106,13 @@ async def play_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
     if server_id not in saved:
-        saved[server_id] = {}
+        await ctx.send(f"ok")
 
     save = saved[server_id]
     quer = ' '.join(args)
 
     if quer not in save:
+        print(save)
         await ctx.send(f"{ctx.message.author.mention} this list no exist")
         return
 
