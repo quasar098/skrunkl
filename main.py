@@ -164,7 +164,7 @@ async def play_list(ctx: commands.Context, *args):
         if server_id in queues:
             queues[server_id].append((path, info))
             await ctx.send(f"adding {info['title']} to queue")
-            return
+            continue
         queues[server_id] = [(path, info)]
 
         try:
@@ -262,6 +262,27 @@ async def disconnect_from_vc(ctx: commands.Context, *args):
     conn.stop()
     await safe_disconnect(conn)
     queues.pop(ctx.guild.id)
+
+
+@bot.command(name="unplay", aliases=["fuck", "up"])
+async def i_messed_up(ctx: commands.Context, *args):
+    voice_state = ctx.author.voice
+    server_id = ctx.guild.id
+    if not await sense_checks(ctx, voice_state=voice_state):
+        return
+
+    if not len(queues[server_id]):
+        await ctx.send("you are a fucking buffoon")
+        return
+    if len(queues[server_id]) == 1:
+        await ctx.send("only one item in queue so disconnecting")
+        await disconnect_from_vc(ctx, *args)
+        return
+    if len(queues[server_id]) > 2:
+        await ctx.send(f"{ctx.message.author.mention} " +
+                       f"removing {queues[server_id][len(queues[server_id])-1][1]['title']} from queue")
+        queues[server_id].pop()
+        return
 
 
 @bot.command(name='play', aliases=['p'])
@@ -375,12 +396,12 @@ async def sense_checks(ctx: commands.Context, voice_state=None) -> bool:
 
     if voice_state is None:
         print("user needs to be in vc")
-        await ctx.send(f'{ctx.message.author.mention} you have to be in a vc to use this command')
+        await ctx.send(f'{ctx.message.author.mention} you have to be in a vc to use this command (try s!dc if broken)')
         return False
 
     if bot.user.id not in [member.id for member in ctx.author.voice.channel.members] and ctx.guild.id in queues.keys():
         print("user needs to be in same vc as bot")
-        await ctx.send(f'{ctx.message.author.mention} you have to be in the same vc as the bot to use this command')
+        await ctx.send(f'{ctx.message.author.mention} you have to be in the same vc as the bot to use this command (try s!dc if broken)')
         return False
 
     print("passed sense checks")
