@@ -130,7 +130,7 @@ class SkrunklData:
 
         queue.pop(0)
 
-    def stop_playing(self, ctx: commands.Context):
+    async def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""
         server_id = ServerID(ctx.guild.id)
 
@@ -140,7 +140,7 @@ class SkrunklData:
     async def disconnect(self, ctx: commands.Context):
         server_id = ServerID(ctx.guild.id)
 
-        self.stop_playing(ctx)
+        await self.stop_playing(ctx)
         conn = await self.get_connection_from_context(ctx)
         await conn.disconnect()
         self.get_queue(server_id).clear()

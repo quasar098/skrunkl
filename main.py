@@ -210,7 +210,7 @@ async def skip(ctx: commands.Context, *args: str):
 
     await mention(ctx, message)
 
-    data.stop_playing(ctx)
+    await data.stop_playing(ctx)
 
     for _ in range(n_skips):
         data.logger.info(f"skipping track, there's {len(queue)} left")
