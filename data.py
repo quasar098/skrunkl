@@ -161,7 +161,7 @@ class SkrunklData:
         server_id = ServerID(ctx.guild.id)
 
         conn = await self.get_connection_from_context(ctx)
-        await self.stop_playing(ctx)
+
         await conn.disconnect()
 
         self.clear_connection(ServerID(ctx.guild.id))
