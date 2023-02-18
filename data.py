@@ -131,13 +131,14 @@ class SkrunklData:
             conn = await self.get_connection_from_context(ctx)
 
         def try_play_again(err):
-
             if err is not None:
                 self.logger.error(err)
                 return
 
             if len(queue):
                 queue.pop(0)
+
+            await asyncio.sleep(0.4)
 
             asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
