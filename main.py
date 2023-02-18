@@ -184,7 +184,7 @@ async def skip(ctx: commands.Context, *args: str):
     server_id = ServerID(ctx.guild.id)
     queue = data.get_queue(server_id)
 
-    if len(queue) == 0:
+    if queue.playing is None:
         await ctx.send(f'{ctx.message.author.mention} the bot isn\'t playing anything')
         return
 
@@ -199,7 +199,7 @@ async def skip(ctx: commands.Context, *args: str):
 
     if n_skips == 1:
         message = f'skipping track'
-    elif n_skips < len(queue):
+    elif n_skips < len(queue)-1:
         message = f'skipping `{n_skips}` of `{len(queue)}` tracks'
     else:
         await mention(ctx, "just use the disconnect command instead")
@@ -211,7 +211,7 @@ async def skip(ctx: commands.Context, *args: str):
 
     for _ in range(n_skips):
         data.logger.info(f"skipping track, there's {len(queue)} left")
-        queue.pop(0)
+        queue.playing = queue.pop(0)
 
     data.logger.info("tracks skips finished")
 
