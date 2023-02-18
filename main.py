@@ -81,6 +81,9 @@ def keep_playing_on(conn, server_id: int):
 
 def keep_playing(error: Any, connection, server_id):
 
+    if server_id not in queues:
+        queues[server_id] = []
+
     queue = queues[server_id]
 
     if error is not None:
@@ -308,6 +311,8 @@ async def skip(ctx: commands.Context, *args):
     if len(queues[ctx.guild.id]):
         keep_playing(None, conn, ctx.guild.id)
     else:
+        queues.pop(ctx.guild.id)
+        await ctx.send("no more songs so i will disconnect")
         await safe_disconnect(conn)
 
 
