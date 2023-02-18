@@ -141,13 +141,13 @@ async def show_list(ctx: commands.Context, *args):
 
     playlist = matching[0]
 
-    embed_text += f"**playlist {playlist_name} contains:**\n\n"
-
     for position, track in enumerate(playlist.tracks):
         embed_text += f"{track.title}\n"
 
+    data.logger.info(embed_text)
+
     embed_ = discord.Embed(color=COLOR)
-    embed_.add_field(name='currently playing:', value=embed_text)
+    embed_.add_field(name=f'playlist {playlist_name} contains:', value=embed_text)
     await ctx.send(embed=embed_)
 
 
