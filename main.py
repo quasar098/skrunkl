@@ -75,7 +75,11 @@ def main():
         return err
 
 
-def keep_playing(error: Any, connection, server_id):
+def keep_playing(error: Any, connection=None, server_id: int = None):
+
+    if server_id is None or connection is None:
+        return
+
     queue = queues[server_id]
 
     if error is not None:
@@ -336,11 +340,7 @@ async def skrunkly_theme(ctx: commands.Context, *args):
 
     server_id = ctx.guild.id
 
-    if len(queues.get(server_id, [])) != 0:
-        await ctx.send("skrunkly queue must be empty")
-        return
-
-    await ctx.send("playing skrunkly theme song")
+    await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
 
     queues[server_id].append(SkrunklyTheme())
 
@@ -349,7 +349,7 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     except discord.ClientException:
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
-    if not conn.is_playing():
+    if not len(queues[server_id]):
         keep_playing(None, conn, server_id)
 
 
