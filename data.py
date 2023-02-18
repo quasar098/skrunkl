@@ -6,6 +6,7 @@ from track import *
 import json
 import logging
 from typing import Union
+from os.path import isfile
 from discord.ext import commands
 
 
@@ -141,12 +142,21 @@ class SkrunklData:
             asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
         if not conn.is_playing():
+
+            if queue.first.file_path is None or not isfile(queue.first.file_path):
+                await queue.first.download(server_id)
+
             conn.play(
                 discord.FFmpegOpusAudio(
-                    source="./skrunkly.mp3"
+                    source=queue.first.file_path
                 ),
                 after=try_play_again
             )
+
+            if queue.first.url is not None:
+                await ctx.send(f"now playing {queue.first.url}")
+                return
+            await ctx.send(f"now playing {queue.first.title}")
 
     async def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""

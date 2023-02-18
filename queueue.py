@@ -41,7 +41,7 @@ class Queue:
             return
         self.tracks.pop(index)
 
-    def add_youtube(self, query: str) -> YoutubeTrack:
+    def add_youtube(self, server_id, query: str) -> YoutubeTrack:
         with yt_dlp.YoutubeDL(
                 {'format': 'worstaudio',
                  'source_address': '0.0.0.0',
@@ -60,6 +60,7 @@ class Queue:
 
             yt_track = YoutubeTrack(info['webpage_url'])
             yt_track.title = info.get("title", "Untitled Video")
+            yt_track.url = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
             self.tracks.append(yt_track)
 
             return yt_track

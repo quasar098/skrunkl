@@ -1,4 +1,5 @@
 from typing import Optional, Any
+import yt_dlp
 
 
 class Track:
@@ -12,7 +13,7 @@ class Track:
     def __repr__(self):
         return f"<Track({self.title})>"
 
-    async def download(self):
+    async def download(self, server_id):
         pass
 
 
@@ -23,15 +24,25 @@ class YoutubeTrack(Track):
         self.file_path = None
         self.url = url
 
-    async def download(self):
-        pass
+    async def download(self, server_id):
+        with yt_dlp.YoutubeDL(
+                {'format': 'worstaudio',
+                 'source_address': '0.0.0.0',
+                 'default_search': 'ytsearch',
+                 'outtmpl': '%(id)s.%(ext)s',
+                 'noplaylist': True,
+                 'allow_playlist_files': False,
+                 'paths': {'home': f'./dl/{server_id.n}'}}) as ydl:
+
+            # get the info for a track
+            ydl.download([self.url])
 
 
-class SkrunklyTheme(Track):
+class SkrunklyThemeTrack(Track):
     def __init__(self):
         super().__init__()
         self.title = "Skrunkly Theme Song"
         self.file_path = "./skrunkly.mp3"
 
-    async def download(self):
+    async def download(self, server_id):
         pass

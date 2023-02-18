@@ -113,7 +113,7 @@ async def play_a_list(ctx: commands.Context, *args):
         data.logger.info(f"adding {track} to queue")
         await ctx.send(f"adding `{track}` to queue")
 
-        queue.add_youtube(track)
+        queue.add_youtube(server_id, track)
 
         await data.try_play(ctx)
 
@@ -228,7 +228,7 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     else:
         await mention(ctx, "playing skrunkly theme song")
 
-    queue.add(SkrunklyTheme())
+    queue.add(SkrunklyThemeTrack())
 
     await data.try_play(ctx)
 
@@ -249,7 +249,7 @@ async def play(ctx: commands.Context, *args):
     else:
         data.set_cooldown(server_id, time()+COOLDOWN)
 
-    yt_track = queue.add_youtube(query)
+    yt_track = queue.add_youtube(server_id, query)
 
     if len(queue):
         await mention(ctx, f"adding `{yt_track.title}` to queue")
