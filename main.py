@@ -319,7 +319,7 @@ async def i_messed_up(ctx: commands.Context, *args):
         await ctx.send("disconnecting because only one item in queue")
         await disconnect_from_vc(ctx, *args)
         return
-    if len(queues[server_id]) > 2:
+    if len(queues[server_id]) >= 2:
         await ctx.send(f"{ctx.message.author.mention} " +
                        f"removing {queues[server_id][len(queues[server_id])-1].title} from queue")
         queues[server_id].pop()
