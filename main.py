@@ -1,17 +1,16 @@
-import discord
-from discord.ext import commands
-import yt_dlp
-from urllib.parse import urlparse
-import asyncio
 import os
 import shutil
 import sys
-from dotenv import load_dotenv
-from time import time
 from random import shuffle
-from track import *
-from queue import Queue
+from time import time
+
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+
 from data import SkrunklData, ServerID, Playlist
+from track import *
+from logging import Logger, CRITICAL
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
@@ -30,7 +29,7 @@ bot = commands.Bot(
     )
 )
 
-data = SkrunklData()
+data = SkrunklData(bot)
 
 
 async def mention(ctx: commands.Context, message: str):
@@ -42,7 +41,7 @@ def main():
         return ("No token provided. Please create a .env file containing the token.\n" +
                 "For more information view the README.md")
     try:
-        bot.run(TOKEN)
+        bot.run(TOKEN, log_handler=Logger("discord", level=CRITICAL))
     except discord.PrivilegedIntentsRequired as err:
         return err
 
@@ -59,7 +58,7 @@ def keep_playing(error: Any, connection, server_id: ServerID):
 
     first = queue.first
     if first is None:
-        asyncio.run_coroutine_threadsafe(safe_disconnect(connection), bot.loop).result()
+        # todo disconnect if nothing in queue
         data.logger.info("left vc because nothing in queue")
         return
     file_path = first.file_path
@@ -151,7 +150,7 @@ async def play_a_list(ctx: commands.Context, *args):
 
         queue.add_youtube(track)
 
-        data.try_play()
+        data.try_play(ctx)
 
 
 @bot.command(name='queue', aliases=['q'])
@@ -181,7 +180,7 @@ async def show_queue(ctx: commands.Context, *args):
 
 
 @bot.command(name='skip', aliases=['s'])
-async def skip(ctx: commands.Context, *args):
+async def skip(ctx: commands.Context, *args: str):
 
     if not await sense_checks(ctx):
         return
@@ -194,20 +193,24 @@ async def skip(ctx: commands.Context, *args):
         return
 
     n_skips = 1
-    if args[0] in ('all', 'a'):
-        n_skips = len(queue)
+    try:
+        if args[0].isnumeric():
+            n_skips = int(args[0])
+    except ValueError:
+        await mention(ctx, "invalid number")
+        return
 
     if n_skips == 1:
-        message = f'{ctx.message.author.mention} skipping track'
+        message = f'skipping track'
     elif n_skips < len(queue):
-        message = f'{ctx.message.author.mention} skipping `{n_skips}` of `{len(queue)}` tracks'
+        message = f'skipping `{n_skips}` of `{len(queue)}` tracks'
     else:
-        message = f'{ctx.message.author.mention} skipping all tracks'
-        n_skips = len(queue)
+        await mention(ctx, "just use the disconnect command instead")
+        return
 
-    await ctx.send(message)
+    await mention(ctx, message)
 
-    data.stop_playing()
+    data.stop_playing(ctx)
 
     for _ in range(n_skips):
         data.logger.info(f"skipping track, there's {len(queue)} left")
@@ -215,15 +218,16 @@ async def skip(ctx: commands.Context, *args):
 
     data.logger.info("tracks skips finished")
 
-    data.try_play()
+    data.try_play(ctx)
 
 
 @bot.command(name='disconnect', aliases=['dc'])
 async def disconnect_from_vc(ctx: commands.Context, *args):
-    server_id = ServerID(ctx.guild.id)
+    if not await sense_checks(ctx):
+        return
 
-    data.stop_playing()
-    data.get_queue(server_id).clear()
+    data.disconnect(ctx)
+    await ctx.send("disconnected from vc")
 
 
 @bot.command(name="unplay", aliases=["mistake"])
@@ -262,7 +266,7 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     else:
         await mention(ctx, "playing skrunkly theme song")
 
-    data.try_play()
+    data.try_play(ctx)
 
 
 @bot.command(name='play', aliases=['p'])
@@ -288,19 +292,13 @@ async def play(ctx: commands.Context, *args):
 
     queue.add_youtube(query)
 
-    data.try_play()
+    data.try_play(ctx)
 
 
 def get_voice_client_from_channel_id(channel_id: int):
     for voice_client in bot.voice_clients:
         if voice_client.channel.id == channel_id:
             return voice_client
-
-
-async def safe_disconnect(connection):
-    if not connection.is_playing():
-        data.logger.info("disconnected safely")
-        await connection.disconnect()
 
 
 async def sense_checks(ctx: commands.Context) -> bool:

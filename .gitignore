@@ -1,7 +1,9 @@
 dl/*
+dl
 ignore/
 __pycache__
 nohup.out
 .env
 .idea
+.vscode
 saved.json

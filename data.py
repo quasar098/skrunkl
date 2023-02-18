@@ -1,8 +1,11 @@
+import discord
+
 from queue import Queue
 from track import *
 import json
 import logging
 from typing import Union
+from discord.ext import commands
 
 
 class ServerID:
@@ -24,9 +27,11 @@ class Playlist:
 
 class SkrunklData:
     INSTANCE = None
+    BOT = None
 
-    def __init__(self):
+    def __init__(self, bot: commands.Bot):
         SkrunklData.INSTANCE = self
+        SkrunklData.BOT = bot
 
         logging.basicConfig(
             level=logging.DEBUG,
@@ -37,6 +42,7 @@ class SkrunklData:
         self._queues: dict[ServerID, Queue] = {}
         self._cooldowns: dict[ServerID, float] = {}
         self._playlists: dict[ServerID, list[Playlist]] = {}
+        self._connections: dict[ServerID, Optional[discord.VoiceClient]] = {}
 
         self.load_playlists()
 
@@ -77,6 +83,8 @@ class SkrunklData:
             self._cooldowns[server_id] = 0
         if server_id not in self._playlists:
             self._playlists[server_id] = []
+        if server_id not in self._connections:
+            self._connections[server_id] = None
 
     def get_queue(self, server_id: ServerID) -> Queue:
         self.register_server_id(server_id)
@@ -93,15 +101,73 @@ class SkrunklData:
         self.register_server_id(server_id)
         return self._playlists.get(server_id)
 
+    def get_connection(self, server_id: ServerID):
+        self.register_server_id(server_id)
+        return self._connections.get(server_id)
+
     def purge(self, server_id: ServerID):
         self.register_server_id(server_id)
         self._queues.pop(server_id)
         self._cooldowns.pop(server_id)
 
-    def try_play(self):
+    def try_play(self, ctx: commands.Context, conn: discord.VoiceClient = None):
         """Play a track if not currently playing a track"""
-        pass
+        server_id = ServerID(ctx.guild.id)
+        queue = self.get_queue(server_id)
 
-    def stop_playing(self):
+        if not len(queue):
+            self.disconnect(ctx)
+            return
+
+        conn = self.get_connection_from_context(ctx) if conn is None else conn
+
+        conn.play(
+            discord.FFmpegOpusAudio(
+                source="./skrunkly.mp3"
+            ),
+            after=self.try_play
+        )
+
+        queue.pop(0)
+
+    def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""
-        pass
+        server_id = ServerID(ctx.guild.id)
+
+        self.get_connection_from_context(ctx).stop()
+
+    def disconnect(self, ctx: commands.Context):
+        server_id = ServerID(ctx.guild.id)
+
+        self.stop_playing(ctx)
+        self.get_connection_from_context(ctx).disconnect()
+        self.get_queue(server_id).clear()
+
+    async def register_connection(self, server_id: ServerID, voice_client: discord.VoiceClient):
+        self._connections[server_id] = voice_client
+
+    def get_connection_from_context(self, ctx: commands.Context):
+        voice_state = ctx.author.voice
+
+        if voice_state is None:
+            return None
+
+        server_id = ServerID(ctx.guild.id)
+
+        maybe_conn = self.get_connection(server_id)
+        if maybe_conn is not None:
+            return maybe_conn
+
+        maybe_conn = get_voice_client_from_voice_state(voice_state)
+        if maybe_conn is not None:
+            self.register_connection(server_id, maybe_conn)
+            return maybe_conn
+
+        new_conn = await voice_state.channel.connect()
+        self.register_connection(server_id, new_conn)
+
+
+def get_voice_client_from_voice_state(voice_state):
+    for voice_client in SkrunklData.BOT.voice_clients:
+        if voice_client.channel.id == voice_state.channel.id:
+            return voice_client
