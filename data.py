@@ -151,22 +151,24 @@ class SkrunklData:
         queue = self.get_queue(server_id)
         queue.playing = None
 
-        conn = await self.get_connection_from_context(ctx)
-        conn.stop()
+        conn = await self.get_connection_from_context(ctx, get_safely=True)
+        if conn:
+            conn.stop()
 
     async def disconnect(self, ctx: commands.Context):
         server_id = ServerID(ctx.guild.id)
 
-        await self.stop_playing(ctx)
         conn = await self.get_connection_from_context(ctx)
+        await self.stop_playing(ctx)
         await conn.disconnect()
+
         self.clear_connection(ServerID(ctx.guild.id))
         self.get_queue(server_id).clear()
 
     async def register_connection(self, server_id: ServerID, voice_client: discord.VoiceClient):
         self._connections[server_id] = voice_client
 
-    async def get_connection_from_context(self, ctx: commands.Context):
+    async def get_connection_from_context(self, ctx: commands.Context, get_safely: bool = False):
         voice_state = ctx.author.voice
 
         if voice_state is None:
@@ -183,9 +185,10 @@ class SkrunklData:
             await self.register_connection(server_id, maybe_conn)
             return maybe_conn
 
-        new_conn = await voice_state.channel.connect()
-        await self.register_connection(server_id, new_conn)
-        return new_conn
+        if not get_safely:
+            new_conn = await voice_state.channel.connect()
+            await self.register_connection(server_id, new_conn)
+            return new_conn
 
 
 def get_voice_client_from_voice_state(voice_state):
