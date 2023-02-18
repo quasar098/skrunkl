@@ -134,19 +134,21 @@ class SkrunklData:
         """Stop the playing of a track temporarily"""
         server_id = ServerID(ctx.guild.id)
 
-        self.get_connection_from_context(ctx).stop()
+        conn = await self.get_connection_from_context(ctx)
+        conn.stop()
 
     def disconnect(self, ctx: commands.Context):
         server_id = ServerID(ctx.guild.id)
 
         self.stop_playing(ctx)
-        self.get_connection_from_context(ctx).disconnect()
+        conn = await self.get_connection_from_context(ctx)
+        conn.disconnect()
         self.get_queue(server_id).clear()
 
     async def register_connection(self, server_id: ServerID, voice_client: discord.VoiceClient):
         self._connections[server_id] = voice_client
 
-    def get_connection_from_context(self, ctx: commands.Context):
+    async def get_connection_from_context(self, ctx: commands.Context):
         voice_state = ctx.author.voice
 
         if voice_state is None:
@@ -160,11 +162,11 @@ class SkrunklData:
 
         maybe_conn = get_voice_client_from_voice_state(voice_state)
         if maybe_conn is not None:
-            self.register_connection(server_id, maybe_conn)
+            await self.register_connection(server_id, maybe_conn)
             return maybe_conn
 
         new_conn = await voice_state.channel.connect()
-        self.register_connection(server_id, new_conn)
+        await self.register_connection(server_id, new_conn)
 
 
 def get_voice_client_from_voice_state(voice_state):
