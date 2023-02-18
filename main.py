@@ -432,10 +432,7 @@ async def play(ctx: commands.Context, *args):
 
     await ctx.send(f"playing `{info['title']}`")
 
-    conn.play(
-        discord.FFmpegOpusAudio(path),
-        after=keep_playing_on(conn, server_id)
-    )
+    keep_playing(None, conn, server_id)
 
 
 def get_voice_client_from_channel_id(channel_id: int):
