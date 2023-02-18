@@ -12,3 +12,7 @@
 - `s!pl` - play playlist tracks in random order
 
 ## warning: you must have ffmpeg exec on path
+
+## todo:
+- spotify playlists and songs
+- mp3 attachments
