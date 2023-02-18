@@ -91,8 +91,8 @@ def keep_playing(error: Any, connection, server_id):
 
     try:
         path = queues[server_id][0].file_path
-    except KeyError:
-        logger.debug("got dc'd before finishing a song")
+    except (KeyError, IndexError):
+        logger.debug("no more songs to play")
         return
 
     queues[server_id].pop(0)
@@ -299,6 +299,7 @@ async def skip(ctx: commands.Context, *args):
 
     voice_client: discord.VoiceClient = get_voice_client_from_channel_id(ctx.author.voice.channel.id)
     for _ in range(n_skips - 1):
+        print("SKIPPING STUFF")
         queues[ctx.guild.id].pop(0)
     voice_client.stop()
 
