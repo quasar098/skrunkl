@@ -75,7 +75,11 @@ def main():
         return err
 
 
-def keep_playing(error: Any, connection=None, server_id: int = None):
+def keep_playing_on(conn, server_id: int):
+    return lambda _: keep_playing(_, conn, server_id)
+
+
+def keep_playing(error: Any, connection, server_id):
 
     queue = queues[server_id]
 
@@ -101,7 +105,7 @@ def keep_playing(error: Any, connection=None, server_id: int = None):
     if len(queues):
         connection.play(
             discord.FFmpegOpusAudio(queues[server_id][0].file_path),
-            after=keep_playing
+            after=keep_playing_on(connection, server_id)
         )
         logger.debug(f"started playing {queues[server_id][0].title}")
     else:
@@ -226,7 +230,7 @@ async def play_list(ctx: commands.Context, *args):
 
         conn.play(
             discord.FFmpegOpusAudio(path),
-            after=keep_playing
+            after=keep_playing_on(conn, server_id)
         )
 
 
@@ -409,7 +413,7 @@ async def play(ctx: commands.Context, *args):
 
     conn.play(
         discord.FFmpegOpusAudio(path),
-        after=keep_playing
+        after=keep_playing_on(conn, server_id)
     )
 
 
