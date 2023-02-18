@@ -189,12 +189,13 @@ async def skip(ctx: commands.Context, *args: str):
         return
 
     n_skips = 1
-    try:
-        if args[0].isnumeric():
-            n_skips = int(args[0])
-    except ValueError:
-        await mention(ctx, "invalid number")
-        return
+    if len(args):
+        try:
+            if args[0].isnumeric():
+                n_skips = int(args[0])
+        except ValueError:
+            await mention(ctx, "invalid number")
+            return
 
     if n_skips == 1:
         message = f'skipping track'

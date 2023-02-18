@@ -141,6 +141,8 @@ class SkrunklData:
             after=try_play_again
         )
 
+        queue.playing = queue[0]
+
         queue.pop(0)
 
     async def stop_playing(self, ctx: commands.Context):
