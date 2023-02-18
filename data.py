@@ -116,7 +116,8 @@ class SkrunklData:
         queue = self.get_queue(server_id)
 
         if not len(queue):
-            self.disconnect(ctx)
+            await self.disconnect(ctx)
+            ctx.send("disconnecting because no more songs")
             return
 
         conn = self.get_connection_from_context(ctx) if conn is None else conn
