@@ -60,7 +60,7 @@ class Queue:
 
             yt_track = YoutubeTrack(info['webpage_url'])
             yt_track.title = info.get("title", "Untitled Video")
-            yt_track.url = f'./dl/{server_id.n}/{info["id"]}.{info["ext"]}'
+            yt_track.file_path = f'./dl/{server_id.n}/{info["id"]}.{info["ext"]}'
             self.tracks.append(yt_track)
 
             return yt_track
