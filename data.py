@@ -160,9 +160,12 @@ class SkrunklData:
     async def disconnect(self, ctx: commands.Context):
         server_id = ServerID(ctx.guild.id)
 
-        conn = await self.get_connection_from_context(ctx)
+        conn = await self.get_connection_from_context(ctx, get_safely=True)
 
-        await conn.disconnect()
+        await self.stop_playing(ctx)
+
+        if conn:
+            await conn.disconnect()
 
         self.clear_connection(ServerID(ctx.guild.id))
         self.get_queue(server_id).clear()
