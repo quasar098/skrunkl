@@ -265,6 +265,8 @@ async def skip(ctx: commands.Context, *args):
 
     if queue_length == 0:
         await ctx.send(f'{ctx.message.author.mention} the bot isn\'t playing anything')
+        if ctx.guild.id in queues:
+            queues.pop(ctx.guild.id)
         return
 
     if not await sense_checks(ctx):
@@ -294,6 +296,17 @@ async def skip(ctx: commands.Context, *args):
     for _ in range(n_skips - 1):
         queues[ctx.guild.id].pop(0)
     voice_client.stop()
+
+    voice_state = ctx.author.voice
+    try:
+        conn = await voice_state.channel.connect()
+    except discord.ClientException:
+        conn = get_voice_client_from_channel_id(voice_state.channel.id)
+
+    if len(queues[ctx.guild.id]):
+        keep_playing(None, conn, ctx.guild.id)
+    else:
+        await safe_disconnect(conn)
 
 
 @bot.command(name='disconnect', aliases=['dc'])
