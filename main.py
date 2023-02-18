@@ -10,10 +10,13 @@ from dotenv import load_dotenv
 from time import time
 import json
 from random import shuffle
+from track import *
+import logging
+
+logger = logging.Logger("skrunkl")
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
-PRINT_STACK_TRACE = os.getenv('PRINT_STACK_TRACE', '1').lower() in ('true', 't', '1')
 COOLDOWN = int(os.getenv('COOLDOWN', '5'))
 
 PREFIX = 's!'
@@ -29,26 +32,36 @@ bot = commands.Bot(
     )
 )
 
-queues = {}  # {server_id: [(vid_file, info), ...]}
-cooldowns = {}  # {server_id: next_available_time}
-saved = {}  # {server_id: {list_name: [search_queries...]}}
+# {server_id: [(vid_file, info), ...]}
+queues: dict[int, list[Track]] = {}
+
+# {server_id: next_available_time}
+cooldowns: dict[int, float] = {}
+
+# {server_id_as_str: {list_name: [search_queries...]}}
+saved_playlists: dict[str, dict[str, list[str]]] = {}
 
 
 def save_to_file():
-    with open(f"saved.json", 'w') as f:
-        json.dump(saved, f)
+    # noinspection PyBroadException
+    try:
+        with open(f"saved.json", 'w') as f:
+            json.dump(saved_playlists, f)
+            logger.debug("successfully wrote to saved.json")
+    except Exception:
+        logger.error("failed to write to saved.json")
 
 
 def load_from_file():
-    global saved
+    global saved_playlists
     # noinspection PyBroadException
     try:
         with open("saved.json") as f:
-            saved = json.load(f)
-            print(f"success! {saved}")
+            saved_playlists = json.load(f)
+            logger.info("loaded saved.json successfully")
     except Exception:
-        print("fail reading json saved")
-        saved = {}
+        logger.error("fail reading saved.json")
+        saved_playlists = {}
 
 
 def main():
@@ -62,14 +75,49 @@ def main():
         return err
 
 
+def keep_playing(error: Any, connection, server_id):
+    queue = queues[server_id]
+
+    if error is not None:
+        logger.error(f"{error}")
+
+    try:
+        path = queues[server_id][0].file_path
+    except KeyError:
+        logger.debug("got dc'd before finishing a song")
+        return
+
+    queues[server_id].pop(0)
+
+    if path not in [i.file_path for i in queues[server_id]]:
+        # if the song isn't queued up after this, delete from dl folder
+        try:
+            os.remove(path)
+            logger.debug(f"successfully removed file {path}")
+        except FileNotFoundError:
+            logger.error(f"couldn't delete {path}")
+
+    if len(queues):
+        connection.play(
+            discord.FFmpegOpusAudio(queues[server_id][0].file_path),
+            after=keep_playing
+        )
+        logger.debug(f"started playing {queues[server_id][0].title}")
+    else:
+        # directory will be deleted on disconnect
+        queues.pop(server_id)
+        asyncio.run_coroutine_threadsafe(safe_disconnect(connection), bot.loop).result()
+        logger.debug("left vc because nothing in queue")
+
+
 @bot.command(name="addlist", aliases=["al"])
 async def add_to_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if str(server_id) not in saved:
-        saved[str(server_id)] = {}
+    if str(server_id) not in saved_playlists:
+        saved_playlists[str(server_id)] = {}
 
-    save = saved[str(server_id)]
+    save = saved_playlists[str(server_id)]
     if not (len(args) > 1):
         await ctx.send(f"you are using incorrectly")
         return
@@ -90,13 +138,13 @@ async def add_to_list(ctx: commands.Context, *args):
 async def delete_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if str(server_id) not in saved:
-        saved[str(server_id)] = {}
+    if str(server_id) not in saved_playlists:
+        saved_playlists[str(server_id)] = {}
 
     quer = ' '.join(args)
 
-    if quer in saved[str(server_id)]:
-        saved[str(server_id)].pop(quer)
+    if quer in saved_playlists[str(server_id)]:
+        saved_playlists[str(server_id)].pop(quer)
         await ctx.send("deleted list")
         return
     await ctx.send("you are a fucking buffoon")
@@ -106,14 +154,13 @@ async def delete_list(ctx: commands.Context, *args):
 async def play_list(ctx: commands.Context, *args):
     server_id = ctx.guild.id
 
-    if str(server_id) not in saved:
-        saved[str(server_id)] = {}
+    if str(server_id) not in saved_playlists:
+        saved_playlists[str(server_id)] = {}
 
-    save = saved[str(server_id)]
+    save = saved_playlists[str(server_id)]
     quer = ' '.join(args)
 
     if quer not in save:
-        print(save)
         await ctx.send(f"{ctx.message.author.mention} this list no exist")
         return
 
@@ -130,7 +177,7 @@ async def play_list(ctx: commands.Context, *args):
 
     for _ in test:
 
-        print(f"downloading {_}")
+        logger.debug(f"downloading {_}")
 
         query = _
         voice_state = ctx.author.voice
@@ -150,37 +197,35 @@ async def play_list(ctx: commands.Context, *args):
                                'noplaylist': True,
                                'allow_playlist_files': False,
                                'paths': {'home': f'./dl/{server_id}'}}) as ydl:
+
             info = ydl.extract_info(query, download=False)
+
+            # make sure only one song
             if 'entries' in info:
                 info = info['entries'][0]
 
-            # send link if it was a search, otherwise send title as sending link again would clutter chat with previews
-            await ctx.send('downloading '
-                           + (f'https://youtu.be/{info["id"]}' if will_need_search else f'`{info["title"]}`'))
+            # do not show links because chat clutter
+            await ctx.send(f'downloading `{info["title"]}`')
+
             ydl.download([query])
 
         path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
 
-        if server_id in queues:
-            queues[server_id].append((path, info))
-            await ctx.send(f"adding {info['title']} to queue")
-            continue
-        queues[server_id] = [(path, info)]
+        # add a YoutubeTrack to the queue
+        if server_id not in queues:
+            queues[server_id] = []
+        queues[server_id].append(YoutubeTrack(path, info))
 
         try:
             conn = await voice_state.channel.connect()
         except discord.ClientException:
             conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
-        def next_song(err=None, connection=conn, sid=server_id):
-            print(f"playing next song in {server_id}")
-            after_track(err, connection, sid)
-
         await ctx.send(f"playing `{info['title']}`")
 
         conn.play(
             discord.FFmpegOpusAudio(path),
-            after=next_song
+            after=keep_playing
         )
 
 
@@ -191,24 +236,19 @@ async def show_queue(ctx: commands.Context, *args):
     except KeyError:
         queue = None
 
+    if not await sense_checks(ctx):
+        return
+
     if queue is None:
         await ctx.send(f'{ctx.message.author.mention} the bot isn\'t playing anything')
     else:
         def title_str(val):
             return '‣ %s\n\n' % val[1] if val[0] == 0 else '**%2d:** %s\n' % val
 
-        queue_str = ''.join(map(title_str, enumerate([i[1]["title"] for i in queue])))
+        queue_str = ''.join(map(title_str, enumerate([track.title for track in queue])))
         embed_ = discord.Embed(color=COLOR)
         embed_.add_field(name='currently playing:', value=queue_str)
         await ctx.send(embed=embed_)
-
-    if not await sense_checks(ctx):
-        return
-
-
-@bot.command(name='showlist', aliases=['sl'])
-async def show_lists(ctx: commands.Context, *args):
-    await ctx.send(json.dumps(saved[str(ctx.guild.id)]))
 
 
 @bot.command(name='skip', aliases=['s'])
@@ -272,17 +312,42 @@ async def i_messed_up(ctx: commands.Context, *args):
         return
 
     if not len(queues[server_id]):
-        await ctx.send("you are a fucking buffoon")
+        await ctx.send("there is nothing playing, idiot")
         return
     if len(queues[server_id]) == 1:
-        await ctx.send("only one item in queue so disconnecting")
+        await ctx.send("disconnecting because only one item in queue")
         await disconnect_from_vc(ctx, *args)
         return
     if len(queues[server_id]) > 2:
         await ctx.send(f"{ctx.message.author.mention} " +
-                       f"removing {queues[server_id][len(queues[server_id])-1][1]['title']} from queue")
+                       f"removing {queues[server_id][len(queues[server_id])-1].title} from queue")
         queues[server_id].pop()
         return
+
+
+@bot.command(name="skrunkl", aliases=["skrunk", "skrunkly", "theme"])
+async def skrunkly_theme(ctx: commands.Context, *args):
+    voice_state = ctx.author.voice
+    if not await sense_checks(ctx, voice_state=voice_state):
+        return
+
+    server_id = ctx.guild.id
+
+    if len(queues.get(server_id, [])) != 0:
+        await ctx.send("skrunkly queue must be empty")
+        return
+
+    await ctx.send("playing skrunkly theme song")
+
+    queues[server_id].append(SkrunklyTheme())
+
+    try:
+        conn = await voice_state.channel.connect()
+    except discord.ClientException:
+        conn = get_voice_client_from_channel_id(voice_state.channel.id)
+
+    if not conn.is_playing():
+        keep_playing(None, conn, server_id)
 
 
 @bot.command(name='play', aliases=['p'])
@@ -326,26 +391,24 @@ async def play(ctx: commands.Context, *args):
 
     path = f'./dl/{server_id}/{info["id"]}.{info["ext"]}'
 
-    if server_id in queues:
-        queues[server_id].append((path, info))
+    if server_id not in queues:
+        queues[server_id] = []
+
+    if len(queues[server_id]):
         await ctx.send(f"{ctx.message.author.mention} adding {info['title']} to queue")
-        return
-    queues[server_id] = [(path, info)]
+
+    queues[server_id].append(YoutubeTrack(path, info))
 
     try:
         conn = await voice_state.channel.connect()
     except discord.ClientException:
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
-    def next_song(err=None, connection=conn, sid=server_id):
-        print(f"playing next song in {server_id}")
-        after_track(err, connection, sid)
-
     await ctx.send(f"playing `{info['title']}`")
 
     conn.play(
         discord.FFmpegOpusAudio(path),
-        after=next_song
+        after=keep_playing
     )
 
 
@@ -355,38 +418,9 @@ def get_voice_client_from_channel_id(channel_id: int):
             return voice_client
 
 
-def after_track(error, connection, server_id):
-    if error is not None:
-        print(f"err: {error}")
-    try:
-        path = queues[server_id].pop(0)[0]
-    except KeyError:
-        print("got dc'd before finishing song")
-        return  # probably got disconnected
-    if path not in [i[0] for i in queues[server_id]]:  # check that the same video isn't queued multiple times
-        try:
-            os.remove(path)
-            print(f"successfully deleted {path}")
-        except FileNotFoundError:
-            print(f"couldn't delete {path}")
-
-    try:
-        connection.play(
-            discord.FFmpegOpusAudio(
-                queues[server_id][0][0]),
-            after=lambda err=None, cn=connection, sid=server_id:
-            after_track(err, cn, sid)
-        )
-        print("successfully played queue")
-    except IndexError:  # that was the last item in queue
-        queues.pop(server_id)  # directory will be deleted on disconnect
-        asyncio.run_coroutine_threadsafe(safe_disconnect(connection), bot.loop).result()
-        print("left vc because nothing lol")
-
-
 async def safe_disconnect(connection):
     if not connection.is_playing():
-        print("disconnected safely")
+        logger.debug("disconnected safely")
         await connection.disconnect()
 
 
@@ -394,17 +428,21 @@ async def sense_checks(ctx: commands.Context, voice_state=None) -> bool:
     if voice_state is None:
         voice_state = ctx.author.voice
 
+    if ctx.guild.id not in queues:
+        queues[ctx.guild.id] = []
+
     if voice_state is None:
-        print("user needs to be in vc")
+        logger.warning("user needs to be in vc")
         await ctx.send(f'{ctx.message.author.mention} you have to be in a vc to use this command (try s!dc if broken)')
         return False
 
     if bot.user.id not in [member.id for member in ctx.author.voice.channel.members] and ctx.guild.id in queues.keys():
-        print("user needs to be in same vc as bot")
-        await ctx.send(f'{ctx.message.author.mention} you have to be in the same vc as the bot to use this command (try s!dc if broken)')
+        logger.warning("user needs to be in same vc as bot")
+        await ctx.send(f'{ctx.message.author.mention} you have to be in the same vc as the bot to use this command (' +
+                       f'try s!dc if broken)')
         return False
 
-    print("passed sense checks")
+    logger.debug("passed sense checks")
     return True
 
 
@@ -414,43 +452,40 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
         return
 
     if before.channel is None and after.channel is not None:  # joined vc
-        print("joined channel")
+        logger.debug("joined channel")
         return
     if before.channel is not None and after.channel is None:  # disconnected from vc
-        print("left channel")
+        logger.debug("left channel")
 
         # clean up
         server_id = before.channel.guild.id
 
         try:
             queues.pop(server_id)
-            print("successfully removed server id from queues")
+            logger.debug("successfully removed server id from queues")
         except KeyError:
-            print("server id not found in queues while cleaning up")
+            logger.warning("server id not found in queues while cleaning up")
 
         try:
             shutil.rmtree(f'./dl/{server_id}/')
-            print("successfully removed cached downloads")
+            logger.debug("successfully removed cached downloads")
         except FileNotFoundError:
-            print("could not remove cached files")
+            logger.error("could not remove cached files")
 
 
 @bot.event
 async def on_command_error(event: str, *args, **kwargs):
     type_, value, traceback = sys.exc_info()
-    print(f"stopping bot due to error\ntraceback={traceback}\ntype={type_}\nvalue={value}\nevent={event}")
+    logger.critical(f"error\ntraceback={traceback}\ntype={type_}\nvalue={value}\nevent={event}")
 
 
 @bot.event
 async def on_ready():
-    print(f'logged in successfully as {bot.user.name}')
+    logger.debug(f'logged in successfully as {bot.user.name}')
 
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
     except SystemError as err_:
-        if PRINT_STACK_TRACE:
-            raise
-        else:
-            print(err_)
+        print(err_)
