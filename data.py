@@ -130,7 +130,7 @@ class SkrunklData:
         def try_play_again(err):
             if err is not None:
                 self.logger.error(err)
-            asyncio.run(self.try_play(ctx))
+            asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
         conn.play(
             discord.FFmpegOpusAudio(
