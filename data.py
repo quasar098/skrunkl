@@ -33,11 +33,11 @@ class SkrunklData:
         SkrunklData.INSTANCE = self
         SkrunklData.BOT = bot
 
+        self.logger = logging.getLogger("skrunkl")
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)-15s %(levelname)-5s %(msg)s"
         )
-        self.logger = logging.Logger("skrunkl")
 
         self._queues: dict[ServerID, Queue] = {}
         self._cooldowns: dict[ServerID, float] = {}
@@ -114,7 +114,6 @@ class SkrunklData:
         """Play a track if not currently playing a track"""
         server_id = ServerID(ctx.guild.id)
         queue = self.get_queue(server_id)
-        self.logger.debug(str(queue))
 
         if not len(queue):
             await self.disconnect(ctx)
