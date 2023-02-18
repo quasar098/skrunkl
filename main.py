@@ -222,9 +222,6 @@ async def skip(ctx: commands.Context, *args: str):
 
 @bot.command(name='disconnect', aliases=['dc'])
 async def disconnect_from_vc(ctx: commands.Context, *args):
-    if not await sense_checks(ctx):
-        return
-
     await data.disconnect(ctx)
     await ctx.send("disconnected from vc")
 
@@ -334,11 +331,12 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
         # clean up
         server_id = ServerID(before.channel.guild.id)
 
-        try:
-            shutil.rmtree(f'./dl/{server_id}/')
-            data.logger.info("successfully removed cached downloads")
-        except FileNotFoundError:
-            data.logger.error("could not remove cached files")
+        if os.path.exists(f'./dl/{server_id}/'):
+            try:
+                shutil.rmtree(f'./dl/{server_id}/')
+                data.logger.info("successfully removed cached downloads")
+            except FileNotFoundError:
+                data.logger.error("could not remove cached files")
 
 
 @bot.event

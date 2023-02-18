@@ -1,4 +1,5 @@
 import discord
+import asyncio
 
 from queueue import Queue
 from track import *
@@ -126,11 +127,16 @@ class SkrunklData:
         if conn is None:
             conn = await self.get_connection_from_context(ctx)
 
+        def try_play_again(err):
+            if err is not None:
+                self.logger.error(err)
+            asyncio.run(self.try_play(ctx))
+
         conn.play(
             discord.FFmpegOpusAudio(
                 source="./skrunkly.mp3"
             ),
-            after=self.try_play
+            after=try_play_again
         )
 
         queue.pop(0)
