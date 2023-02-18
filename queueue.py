@@ -5,6 +5,7 @@ import yt_dlp
 class Queue:
     def __init__(self):
         self.tracks: list[Track] = []
+        self.playing: Optional[Track] = None
 
     def clear(self):
         self.tracks.clear()

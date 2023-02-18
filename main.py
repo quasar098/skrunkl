@@ -161,17 +161,14 @@ async def show_queue(ctx: commands.Context, *args):
     server_id = ServerID(ctx.guild.id)
     queue = data.get_queue(server_id)
 
-    if not len(queue):
-        await ctx.send(f'{ctx.message.author.mention} the bot isn\'t playing anything')
+    if queue.playing is None:
+        await mention(ctx, f'the bot isn\'t playing anything')
         return
 
-    queue_text = ""
+    queue_text = f"{queue.playing.title}\n\n"
 
     for position, track in enumerate(queue):
-        if position == 0:
-            queue_text += f"{track.title}\n\n"
-            continue
-        queue_text += f"**{position}:**{track.title}\n"
+        queue_text += f"**{position+1}:** {track.title}\n"
 
     embed_ = discord.Embed(color=COLOR)
     embed_.add_field(name='currently playing:', value=queue_text)
@@ -283,8 +280,6 @@ async def play(ctx: commands.Context, *args):
 
     if len(queue):
         await mention(ctx, f"adding `{query}` to queue")
-    else:
-        await mention(ctx, f"playing `{query}`")
 
     queue.add_youtube(query)
 
@@ -330,6 +325,7 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
 
         # clean up
         server_id = ServerID(before.channel.guild.id)
+        data.clear_connection(server_id)
 
         if os.path.exists(f'./dl/{server_id}/'):
             try:

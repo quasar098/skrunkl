@@ -109,6 +109,9 @@ class SkrunklData:
         self.register_server_id(server_id)
         return self._connections.get(server_id)
 
+    def clear_connection(self, server_id: ServerID):
+        self._connections.pop(server_id)
+
     def purge(self, server_id: ServerID):
         self.register_server_id(server_id)
         self._queues.pop(server_id)
@@ -121,7 +124,6 @@ class SkrunklData:
 
         if not len(queue):
             await self.disconnect(ctx)
-            await ctx.send("disconnecting because no more songs")
             return
 
         if conn is None:
@@ -144,6 +146,8 @@ class SkrunklData:
     async def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""
         server_id = ServerID(ctx.guild.id)
+        queue = self.get_queue(server_id)
+        queue.playing = None
 
         conn = await self.get_connection_from_context(ctx)
         conn.stop()
@@ -154,6 +158,7 @@ class SkrunklData:
         await self.stop_playing(ctx)
         conn = await self.get_connection_from_context(ctx)
         await conn.disconnect()
+        self.clear_connection(ServerID(ctx.guild.id))
         self.get_queue(server_id).clear()
 
     async def register_connection(self, server_id: ServerID, voice_client: discord.VoiceClient):
