@@ -101,7 +101,7 @@ async def play_a_list(ctx: commands.Context, *args):
     else:
         data.set_cooldown(server_id, time()+COOLDOWN)
 
-    playlist: Playlist = playlists[playlist_name]
+    playlist: Playlist = [pl for pl in playlists if pl.name == playlist_name][0]
 
     tracks = playlist.tracks.copy()
     shuffle(tracks)
@@ -115,7 +115,7 @@ async def play_a_list(ctx: commands.Context, *args):
 
         queue.add_youtube(server_id, track)
 
-        await data.try_play(ctx)
+    await data.try_play(ctx)
 
 
 @bot.command(name='showlist', aliases=['sl'])
@@ -143,8 +143,6 @@ async def show_list(ctx: commands.Context, *args):
 
     for position, track in enumerate(playlist.tracks):
         embed_text += f"{track}\n"
-
-    data.logger.info(embed_text)
 
     embed_ = discord.Embed(color=COLOR)
     embed_.add_field(name=f'playlist "{playlist_name}" contains:', value=embed_text)
