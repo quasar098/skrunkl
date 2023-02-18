@@ -249,10 +249,12 @@ async def play(ctx: commands.Context, *args):
     else:
         data.set_cooldown(server_id, time()+COOLDOWN)
 
-    if len(queue):
-        await mention(ctx, f"adding `{query}` to queue")
+    yt_track = queue.add_youtube(query)
 
-    queue.add_youtube(query)
+    if len(queue):
+        await mention(ctx, f"adding `{yt_track.title}` to queue")
+    else:
+        await mention(ctx, f"playing {yt_track.title}")
 
     await data.try_play(ctx)
 

@@ -41,7 +41,7 @@ class Queue:
             return
         self.tracks.pop(index)
 
-    def add_youtube(self, query: str):
+    def add_youtube(self, query: str) -> YoutubeTrack:
         with yt_dlp.YoutubeDL(
                 {'format': 'worstaudio',
                  'source_address': '0.0.0.0',
@@ -61,6 +61,8 @@ class Queue:
             yt_track = YoutubeTrack(info['webpage_url'])
             yt_track.title = info.get("title", "Untitled Video")
             self.tracks.append(yt_track)
+
+            return yt_track
 
     def remove(self, remove: Track):
         self.tracks = [song for song in self.tracks if song != remove]
