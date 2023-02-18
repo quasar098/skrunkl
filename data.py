@@ -127,6 +127,8 @@ class SkrunklData:
             await self.disconnect(ctx)
             return
 
+        await asyncio.sleep(0.5)
+
         if conn is None:
             conn = await self.get_connection_from_context(ctx)
 
@@ -137,8 +139,6 @@ class SkrunklData:
 
             if len(queue):
                 queue.pop(0)
-
-            await asyncio.sleep(0.4)
 
             asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
