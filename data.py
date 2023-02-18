@@ -18,6 +18,9 @@ class ServerID:
     def __hash__(self):
         return hash(self.n)
 
+    def __eq__(self, other: "ServerID"):
+        return self.n == other.n
+
 
 class Playlist:
     def __init__(self, name: str, tracks: list[str] = None):
@@ -168,6 +171,7 @@ class SkrunklData:
 
         new_conn = await voice_state.channel.connect()
         await self.register_connection(server_id, new_conn)
+        return new_conn
 
 
 def get_voice_client_from_voice_state(voice_state):

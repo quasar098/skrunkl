@@ -64,3 +64,6 @@ class Queue:
 
     def remove(self, remove: Track):
         self.tracks = [song for song in self.tracks if song != remove]
+
+    def __repr__(self):
+        return f"<Queue(tracks={self.tracks})>"

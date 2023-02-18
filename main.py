@@ -258,12 +258,12 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     server_id = ServerID(ctx.guild.id)
     queue = data.get_queue(server_id)
 
-    queue.add(SkrunklyTheme())
-
     if len(queue):
         await mention(ctx, "queuing skrunkly theme song")
     else:
         await mention(ctx, "playing skrunkly theme song")
+
+    queue.add(SkrunklyTheme())
 
     await data.try_play(ctx)
 
