@@ -344,10 +344,10 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     except discord.ClientException:
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
-    if not len(queues[server_id]):
+    if len(queues[server_id]):
         await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
-        keep_playing(None, conn, server_id)
     else:
+        keep_playing(None, conn, server_id)
         await ctx.send(f"{ctx.message.author.mention} queuing skrunkly theme song")
 
 
