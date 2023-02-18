@@ -168,7 +168,7 @@ async def skip(ctx: commands.Context, *args: str):
 
     if n_skips == 1:
         message = f'skipping track'
-    elif n_skips < len(queue)-1:
+    elif n_skips < len(queue):
         message = f'skipping `{n_skips}` of `{len(queue)}` tracks'
     else:
         await mention(ctx, "just use the disconnect command instead")
