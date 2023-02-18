@@ -102,7 +102,7 @@ def keep_playing(error: Any, connection, server_id):
         except FileNotFoundError:
             logger.error(f"couldn't delete {path}")
 
-    if len(queues):
+    if len(queues[server_id]):
         connection.play(
             discord.FFmpegOpusAudio(queues[server_id][0].file_path),
             after=keep_playing_on(connection, server_id)
