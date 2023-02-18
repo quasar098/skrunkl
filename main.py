@@ -41,7 +41,7 @@ def main():
         return ("No token provided. Please create a .env file containing the token.\n" +
                 "For more information view the README.md")
     try:
-        bot.run(TOKEN, log_handler=Logger("discord", level=CRITICAL))
+        bot.run(TOKEN)
     except discord.PrivilegedIntentsRequired as err:
         return err
 
