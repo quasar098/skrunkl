@@ -131,7 +131,8 @@ class SkrunklData:
 
         def try_play_again(err):
 
-            queue.pop(0)
+            if len(queue):
+                queue.pop(0)
 
             if err is not None:
                 self.logger.error(err)

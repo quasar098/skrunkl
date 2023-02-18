@@ -136,6 +136,7 @@ async def show_queue(ctx: commands.Context, *args):
     for position, track in enumerate(queue):
         if position == 0:
             queue_text += f"{queue.first.title}\n\n"
+            continue
         queue_text += f"**{position}:** {track.title}\n"
 
     embed_ = discord.Embed(color=COLOR)
