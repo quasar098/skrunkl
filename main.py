@@ -91,7 +91,7 @@ async def play_a_list(ctx: commands.Context, *args):
 
     playlist_name = args[0]
 
-    if playlist_name not in playlists:
+    if playlist_name not in [pl.name for pl in playlists]:
         await mention(ctx, "this list no exist")
         return
 
@@ -116,6 +116,39 @@ async def play_a_list(ctx: commands.Context, *args):
         queue.add_youtube(server_id, track)
 
         await data.try_play(ctx)
+
+
+@bot.command(name='showlist', aliases=['sl'])
+async def show_list(ctx: commands.Context, *args):
+    server_id = ServerID(ctx.guild.id)
+
+    embed_text = ""
+
+    if len(args) != 1:
+        await mention(ctx, "is an idiot")
+        return
+
+    playlist_name = args[0]
+    matching = [get_playlist for get_playlist in data.get_playlists(server_id) if args[0] == playlist_name]
+
+    if len(matching) == 0:
+        await mention(ctx, "this list no exist")
+        return
+
+    if len(matching) > 1:
+        await mention(ctx, "there are duplicates of the list (this should not happen)")
+        return
+
+    playlist = matching[0]
+
+    embed_text += f"**playlist {playlist_name} contains:**\n\n"
+
+    for position, track in enumerate(playlist.tracks):
+        embed_text += f"{track.title}\n"
+
+    embed_ = discord.Embed(color=COLOR)
+    embed_.add_field(name='currently playing:', value=embed_text)
+    await ctx.send(embed=embed_)
 
 
 @bot.command(name='queue', aliases=['q'])
