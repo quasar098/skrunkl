@@ -342,8 +342,8 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
 
 
 @bot.event
-async def on_command_error(event: str, *args, **kwargs):
-    data.logger.critical(f"command error, event={event}")
+async def on_command_error(context, exception):
+    data.logger.critical(f"command error, exception={exception}")
 
 
 @bot.event
