@@ -12,13 +12,19 @@ class Track:
     def __repr__(self):
         return f"<Track({self.title})>"
 
+    async def download(self):
+        pass
+
 
 class YoutubeTrack(Track):
-    def __init__(self, path: str, info: dict[str, Any]):
+    def __init__(self, url: str):
         super().__init__()
-        self.title = info.get("title", "Untitled video")
-        self.file_path = path
-        self.url = info.get("webpage_url", "https://quasar.name")
+        self.title = "Untitled video"
+        self.file_path = None
+        self.url = url
+
+    async def download(self):
+        pass
 
 
 class SkrunklyTheme(Track):
@@ -26,3 +32,6 @@ class SkrunklyTheme(Track):
         super().__init__()
         self.title = "Skrunkly Theme Song"
         self.file_path = "./skrunkly.mp3"
+
+    async def download(self):
+        pass
