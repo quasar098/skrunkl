@@ -123,7 +123,8 @@ class SkrunklData:
             await ctx.send("disconnecting because no more songs")
             return
 
-        conn = self.get_connection_from_context(ctx) if conn is None else conn
+        if conn is None:
+            conn = await self.get_connection_from_context(ctx)
 
         conn.play(
             discord.FFmpegOpusAudio(
