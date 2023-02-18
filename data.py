@@ -122,33 +122,33 @@ class SkrunklData:
         server_id = ServerID(ctx.guild.id)
         queue = self.get_queue(server_id)
 
-        if queue.playing is None:
-            if len(queue) == 0:
-                await self.disconnect(ctx)
-                return
+        if len(queue) == 0:
+            await self.disconnect(ctx)
+            return
 
         if conn is None:
             conn = await self.get_connection_from_context(ctx)
 
         def try_play_again(err):
+
+            queue.pop(0)
+
             if err is not None:
                 self.logger.error(err)
+
             asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
-        if not queue.playing:
-            queue.playing = queue.pop(0)
-            conn.play(
-                discord.FFmpegOpusAudio(
-                    source="./skrunkly.mp3"
-                ),
-                after=try_play_again
-            )
+        conn.play(
+            discord.FFmpegOpusAudio(
+                source="./skrunkly.mp3"
+            ),
+            after=try_play_again
+        )
 
     async def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""
         server_id = ServerID(ctx.guild.id)
         queue = self.get_queue(server_id)
-        queue.playing = None
 
         conn = await self.get_connection_from_context(ctx, get_safely=True)
         if conn:

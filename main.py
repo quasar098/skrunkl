@@ -45,40 +45,6 @@ def main():
         return err
 
 
-def keep_playing_gen(conn, server_id: ServerID):
-    return lambda _: keep_playing(_, conn, server_id)
-
-
-def keep_playing(error: Any, connection, server_id: ServerID):
-    queue = data.get_queue(server_id)
-
-    if error is not None:
-        data.logger.error(f"{error}")
-
-    first = queue.first
-    if first is None:
-        # todo disconnect if nothing in queue
-        data.logger.info("left vc because nothing in queue")
-        return
-    file_path = first.file_path
-
-    queue.remove_first()
-
-    if file_path not in [track.file_path for track in queue.tracks]:
-        if "dl" in file_path:
-            try:
-                os.remove(file_path)
-                data.logger.info(f"successfully removed file {file_path}")
-            except FileNotFoundError:
-                data.logger.error(f"couldn't delete {file_path}")
-
-    connection.play(
-        discord.FFmpegOpusAudio(queue.first.file_path),
-        after=keep_playing_gen(connection, server_id)
-    )
-    data.logger.info(f"started playing {queue.first.title}")
-
-
 @bot.command(name="addlist", aliases=["al"])
 async def add_to_a_list(ctx: commands.Context, *args):
     server_id = ServerID(ctx.guild.id)
@@ -161,14 +127,16 @@ async def show_queue(ctx: commands.Context, *args):
     server_id = ServerID(ctx.guild.id)
     queue = data.get_queue(server_id)
 
-    if queue.playing is None:
+    if len(queue) == 0:
         await mention(ctx, f'the bot isn\'t playing anything')
         return
 
-    queue_text = f"{queue.playing.title}\n\n"
+    queue_text = ""
 
     for position, track in enumerate(queue):
-        queue_text += f"**{position+1}:** {track.title}\n"
+        if position == 0:
+            queue_text += f"{queue.first.title}\n\n"
+        queue_text += f"**{position}:** {track.title}\n"
 
     embed_ = discord.Embed(color=COLOR)
     embed_.add_field(name='currently playing:', value=queue_text)
@@ -184,7 +152,7 @@ async def skip(ctx: commands.Context, *args: str):
     server_id = ServerID(ctx.guild.id)
     queue = data.get_queue(server_id)
 
-    if queue.playing is None:
+    if len(queue) == 0:
         await ctx.send(f'{ctx.message.author.mention} the bot isn\'t playing anything')
         return
 
@@ -211,9 +179,8 @@ async def skip(ctx: commands.Context, *args: str):
 
     for _ in range(n_skips):
         data.logger.info(f"skipping track, there's {len(queue)} left")
-        queue.playing = None
         if len(queue):
-            queue.playing = queue.pop(0)
+            queue.pop(0)
 
     data.logger.info("tracks skips finished")
 
