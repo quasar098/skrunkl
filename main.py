@@ -226,7 +226,7 @@ async def disconnect_from_vc(ctx: commands.Context, *args):
     if not await sense_checks(ctx):
         return
 
-    data.disconnect(ctx)
+    await data.disconnect(ctx)
     await ctx.send("disconnected from vc")
 
 

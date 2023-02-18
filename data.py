@@ -137,12 +137,12 @@ class SkrunklData:
         conn = await self.get_connection_from_context(ctx)
         conn.stop()
 
-    def disconnect(self, ctx: commands.Context):
+    async def disconnect(self, ctx: commands.Context):
         server_id = ServerID(ctx.guild.id)
 
         self.stop_playing(ctx)
         conn = await self.get_connection_from_context(ctx)
-        conn.disconnect()
+        await conn.disconnect()
         self.get_queue(server_id).clear()
 
     async def register_connection(self, server_id: ServerID, voice_client: discord.VoiceClient):
