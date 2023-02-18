@@ -131,20 +131,22 @@ class SkrunklData:
 
         def try_play_again(err):
 
+            if err is not None:
+                self.logger.error(err)
+                return
+
             if len(queue):
                 queue.pop(0)
 
-            if err is not None:
-                self.logger.error(err)
-
             asyncio.run_coroutine_threadsafe(self.try_play(ctx), SkrunklData.BOT.loop).result()
 
-        conn.play(
-            discord.FFmpegOpusAudio(
-                source="./skrunkly.mp3"
-            ),
-            after=try_play_again
-        )
+        if not conn.is_playing():
+            conn.play(
+                discord.FFmpegOpusAudio(
+                    source="./skrunkly.mp3"
+                ),
+                after=try_play_again
+            )
 
     async def stop_playing(self, ctx: commands.Context):
         """Stop the playing of a track temporarily"""
