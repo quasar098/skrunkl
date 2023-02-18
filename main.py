@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 from data import SkrunklData, ServerID, Playlist
 from track import *
-from logging import Logger, CRITICAL
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
@@ -150,7 +149,7 @@ async def play_a_list(ctx: commands.Context, *args):
 
         queue.add_youtube(track)
 
-        data.try_play(ctx)
+        await data.try_play(ctx)
 
 
 @bot.command(name='queue', aliases=['q'])
@@ -218,7 +217,7 @@ async def skip(ctx: commands.Context, *args: str):
 
     data.logger.info("tracks skips finished")
 
-    data.try_play(ctx)
+    await data.try_play(ctx)
 
 
 @bot.command(name='disconnect', aliases=['dc'])
@@ -266,7 +265,7 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     else:
         await mention(ctx, "playing skrunkly theme song")
 
-    data.try_play(ctx)
+    await data.try_play(ctx)
 
 
 @bot.command(name='play', aliases=['p'])
@@ -292,7 +291,7 @@ async def play(ctx: commands.Context, *args):
 
     queue.add_youtube(query)
 
-    data.try_play(ctx)
+    await data.try_play(ctx)
 
 
 def get_voice_client_from_channel_id(channel_id: int):

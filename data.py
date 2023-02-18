@@ -110,14 +110,14 @@ class SkrunklData:
         self._queues.pop(server_id)
         self._cooldowns.pop(server_id)
 
-    def try_play(self, ctx: commands.Context, conn: discord.VoiceClient = None):
+    async def try_play(self, ctx: commands.Context, conn: discord.VoiceClient = None):
         """Play a track if not currently playing a track"""
         server_id = ServerID(ctx.guild.id)
         queue = self.get_queue(server_id)
 
         if not len(queue):
             await self.disconnect(ctx)
-            ctx.send("disconnecting because no more songs")
+            await ctx.send("disconnecting because no more songs")
             return
 
         conn = self.get_connection_from_context(ctx) if conn is None else conn
