@@ -142,7 +142,7 @@ async def show_list(ctx: commands.Context, *args):
     playlist = matching[0]
 
     for position, track in enumerate(playlist.tracks):
-        embed_text += f"{track.title}\n"
+        embed_text += f"{track}\n"
 
     data.logger.info(embed_text)
 
