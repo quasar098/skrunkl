@@ -349,10 +349,10 @@ async def skrunkly_theme(ctx: commands.Context, *args):
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
     if len(queues[server_id]):
-        await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
-    else:
-        keep_playing(None, conn, server_id)
         await ctx.send(f"{ctx.message.author.mention} queuing skrunkly theme song")
+    else:
+        await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
+        keep_playing(None, conn, server_id)
 
 
 @bot.command(name='play', aliases=['p'])
