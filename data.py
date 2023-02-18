@@ -1,6 +1,6 @@
 import discord
 
-from queue import Queue
+from queueue import Queue
 from track import *
 import json
 import logging
