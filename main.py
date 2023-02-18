@@ -331,6 +331,9 @@ async def skrunkly_theme(ctx: commands.Context, *args):
     if not await sense_checks(ctx, voice_state=voice_state):
         return
 
+    if ctx.guild.id not in queues:
+        queues[ctx.guild.id] = []
+
     server_id = ctx.guild.id
 
     if len(queues.get(server_id, [])) != 0:
@@ -427,9 +430,6 @@ async def safe_disconnect(connection):
 async def sense_checks(ctx: commands.Context, voice_state=None) -> bool:
     if voice_state is None:
         voice_state = ctx.author.voice
-
-    if ctx.guild.id not in queues:
-        queues[ctx.guild.id] = []
 
     if voice_state is None:
         logger.warning("user needs to be in vc")
