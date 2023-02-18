@@ -77,9 +77,6 @@ def main():
 
 def keep_playing(error: Any, connection=None, server_id: int = None):
 
-    if server_id is None or connection is None:
-        return
-
     queue = queues[server_id]
 
     if error is not None:
@@ -340,8 +337,6 @@ async def skrunkly_theme(ctx: commands.Context, *args):
 
     server_id = ctx.guild.id
 
-    await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
-
     queues[server_id].append(SkrunklyTheme())
 
     try:
@@ -350,7 +345,10 @@ async def skrunkly_theme(ctx: commands.Context, *args):
         conn = get_voice_client_from_channel_id(voice_state.channel.id)
 
     if not len(queues[server_id]):
+        await ctx.send(f"{ctx.message.author.mention} playing skrunkly theme song")
         keep_playing(None, conn, server_id)
+    else:
+        await ctx.send(f"{ctx.message.author.mention} queuing skrunkly theme song")
 
 
 @bot.command(name='play', aliases=['p'])
