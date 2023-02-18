@@ -95,6 +95,8 @@ def keep_playing(error: Any, connection, server_id):
     queues[server_id].pop(0)
 
     if path not in [i.file_path for i in queues[server_id]]:
+        if "dl" not in path:
+            return
         # if the song isn't queued up after this, delete from dl folder
         try:
             os.remove(path)
