@@ -26,7 +26,7 @@ class YoutubeTrack(Track):
 
     async def download(self, server_id):
         with yt_dlp.YoutubeDL(
-                {'format': 'bestaudio',
+                {'format': 'm4a/bestaudio/best',
                  'source_address': '0.0.0.0',
                  'default_search': 'ytsearch',
                  'outtmpl': '%(id)s.%(ext)s',
